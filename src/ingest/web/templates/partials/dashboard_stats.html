@@ -1,0 +1,49 @@
+<section class="pps-panel" aria-live="polite">
+  <div class="pps-hero">
+    <div class="pps-label">Realtime throughput</div>
+    <div class="pps-value">{{ "%.2f"|format(throughput.pps) }}</div>
+    <div class="pps-unit">pages / second</div>
+    <div class="pps-meta muted">
+      last {{ throughput.window_seconds|int }}s ·
+      {{ throughput.pages_in_window }} pages ·
+      {{ throughput.documents_in_window }} docs ·
+      all ingestors combined
+    </div>
+  </div>
+  {% if throughput.by_ingestor %}
+  <div class="pps-ingestors">
+    {% set max_pps = throughput.by_ingestor[0].pps if throughput.by_ingestor[0].pps > 0 else 1 %}
+    {% for row in throughput.by_ingestor %}
+    <div class="pps-ingestor">
+      <div class="pps-ingestor-head">
+        <span class="mono">{{ row.ingestor_id }}</span>
+        <strong>{{ "%.2f"|format(row.pps) }} pps</strong>
+      </div>
+      <div class="pps-bar" aria-hidden="true">
+        <span style="width: {{ ((row.pps / max_pps) * 100)|round(1) }}%;"></span>
+      </div>
+      <div class="muted pps-ingestor-meta">{{ row.pages }} pages · {{ row.documents }} docs</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <p class="muted pps-empty">No indexing activity in the current window.</p>
+  {% endif %}
+</section>
+
+<div class="grid">
+  <div class="stat">
+    <div class="label">queue</div>
+    <div class="value">{{ queue_depth }}</div>
+  </div>
+  <div class="stat">
+    <div class="label">ingestors</div>
+    <div class="value">{{ ingestors_online }}/{{ ingestors_total }}</div>
+  </div>
+  {% for key, value in counts.items() %}
+  <div class="stat">
+    <div class="label">{{ key }}</div>
+    <div class="value">{{ value }}</div>
+  </div>
+  {% endfor %}
+</div>
