@@ -2,15 +2,31 @@
 {% block title %}Dashboard · Ingest{% endblock %}
 {% block content %}
 <h1>Dashboard</h1>
-<p class="muted">Queue depth: <strong>{{ queue_depth }}</strong></p>
-<div class="grid" hx-get="/api/v1/status" hx-trigger="every 5s" hx-swap="none">
-  {% for key, value in counts.items() %}
-  <div class="stat">
-    <div class="label">{{ key }}</div>
-    <div class="value">{{ value }}</div>
-  </div>
-  {% endfor %}
+<div id="dashboard-stats"
+     hx-get="/partials/dashboard-stats"
+     hx-trigger="every 1s, sse:message from:#sse-bridge"
+     hx-swap="innerHTML">
+  {% include "partials/dashboard_stats.html" %}
 </div>
+
+<h2 style="margin-top:2rem;">Ingestors</h2>
+{% if ingestors %}
+<table>
+  <thead><tr><th>ID</th><th>Status</th><th>Hostname</th><th>Activity</th></tr></thead>
+  <tbody>
+  {% for row in ingestors %}
+    <tr>
+      <td><a href="/ingestors">{{ row.ingestor.id }}</a></td>
+      <td><span class="badge {% if row.online %}{% else %}deleted{% endif %}">{% if row.online %}online{% else %}offline{% endif %}</span></td>
+      <td class="muted">{{ row.ingestor.hostname or '—' }}</td>
+      <td class="mono muted">{{ row.ingestor.current_activity.get('stage', '') }}{% if row.ingestor.current_activity.get('path') %}: {{ row.ingestor.current_activity.path }}{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No remote ingestors yet. <a href="/ingestors">Create one</a> and assign sources.</p>
+{% endif %}
 
 <h2 style="margin-top:2rem;">Recent errors</h2>
 {% if errors %}

@@ -13,7 +13,9 @@ from ingest.db.session import dispose_db, init_db, session_scope
 from ingest.mcp.server import create_mcp_server
 from ingest.pipeline.runner import PipelineRunner
 from ingest.services.bootstrap import ensure_default_index_config, ensure_watch_sources
+from ingest.services.events import get_event_hub, reset_event_hub
 from ingest.services.queue import IngestQueue, WorkerPool
+from ingest.services.throughput import get_throughput_meter, reset_throughput_meter
 from ingest.vectors.lancedb_store import LanceStore
 from ingest.watcher.service import WatcherService
 from ingest.web.routes import router as web_router
@@ -28,12 +30,16 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+        reset_event_hub()
+        reset_throughput_meter()
         await init_db(settings)
         lance = LanceStore(settings.lancedb_path, settings.lance_table, settings.embedder_dimension)
         queue = IngestQueue(maxsize=settings.queue_maxsize)
         runner = PipelineRunner(settings, lance)
         workers = WorkerPool(settings, queue, runner)
         watcher = WatcherService(settings, queue, lance)
+        events = get_event_hub()
+        throughput = get_throughput_meter()
 
         async with session_scope() as session:
             await ensure_default_index_config(session, settings)
@@ -45,6 +51,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         app.state.runner = runner
         app.state.workers = workers
         app.state.watcher = watcher
+        app.state.events = events
+        app.state.throughput = throughput
 
         workers.start()
         await watcher.start()
@@ -64,6 +72,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             await watcher.stop()
             await workers.stop()
             await dispose_db()
+            reset_event_hub()
+            reset_throughput_meter()
             logger.info("Ingest app stopped")
 
     app = FastAPI(title="Ingest", version="0.1.0", lifespan=lifespan)

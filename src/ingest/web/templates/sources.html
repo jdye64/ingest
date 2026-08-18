@@ -2,36 +2,91 @@
 {% block title %}Sources · Ingest{% endblock %}
 {% block content %}
 <h1>Watch sources</h1>
+{% if deleted_message %}
+<div class="hit" style="border-color: var(--danger);">
+  <div class="path">Source deleted</div>
+  <p class="mono">{{ deleted_message }}</p>
+  <p class="muted">Removed {{ deleted_docs or 0 }} document(s) from the database and vector store.</p>
+</div>
+{% endif %}
+
 <form class="inline" method="post" action="/sources">
   <div>
     <label class="muted" for="path">Directory path</label><br/>
     <input id="path" name="path" size="50" required placeholder="/path/to/docs" />
   </div>
   <div>
+    <label class="muted" for="ingestor_id">Owner</label><br/>
+    <select id="ingestor_id" name="ingestor_id">
+      <option value="">Local server</option>
+      {% for a in ingestors %}
+      <option value="{{ a.id }}">{{ a.id }} ({{ a.name }})</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
     <label class="muted"><input type="checkbox" name="recursive" value="true" checked /> Recursive</label>
   </div>
   <button type="submit">Add source</button>
 </form>
+<p class="muted">
+  Disable stops watching. Delete permanently removes the source and all of its documents from the database and vector store.
+  Use delete when retiring a dataset or removing sensitive data before re-indexing.
+</p>
 
 <table>
   <thead>
-    <tr><th>Path</th><th>Enabled</th><th>Recursive</th><th>Globs</th><th></th></tr>
+    <tr><th>Path</th><th>Owner</th><th>Enabled</th><th>Recursive</th><th>Globs</th><th></th></tr>
   </thead>
   <tbody>
   {% for s in sources %}
     <tr>
       <td class="mono">{{ s.path }}</td>
+      <td>{% if s.ingestor_id %}<span class="badge">{{ s.ingestor_id }}</span>{% else %}<span class="muted">local</span>{% endif %}</td>
       <td><span class="badge {% if not s.enabled %}deleted{% endif %}">{{ s.enabled }}</span></td>
       <td>{{ s.recursive }}</td>
       <td class="muted">include={{ s.include_globs }}{% if s.exclude_globs %}; exclude={{ s.exclude_globs }}{% endif %}</td>
-      <td>
-        <form method="post" action="/sources/{{ s.id }}/toggle">
+      <td style="white-space:nowrap;">
+        <form method="post" action="/sources/{{ s.id }}/toggle" style="display:inline;">
           <button class="secondary" type="submit">{% if s.enabled %}Disable{% else %}Enable{% endif %}</button>
+        </form>
+        <form method="post" action="/sources/{{ s.id }}/delete" style="display:inline;margin-left:0.35rem;"
+              onsubmit="return confirm('Delete this source and permanently remove all of its documents from the DB and vector store?');">
+          <button type="submit" style="background:var(--danger);">Delete</button>
         </form>
       </td>
     </tr>
   {% else %}
-    <tr><td colspan="5" class="muted">No sources yet. Add a directory above or set WATCH_PATHS.</td></tr>
+    <tr><td colspan="6" class="muted">No sources yet. Add a directory above or set WATCH_PATHS.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+
+<h2 style="margin-top:2rem;">Source audit log</h2>
+<p class="muted">History of create, enable/disable, update, and delete actions.</p>
+<table>
+  <thead>
+    <tr><th>When</th><th>Action</th><th>Path</th><th>Source ID</th><th>Owner</th><th>Actor</th><th>Details</th></tr>
+  </thead>
+  <tbody>
+  {% for e in audit_events %}
+    <tr>
+      <td class="muted">{{ e.created_at }}</td>
+      <td><span class="badge {% if e.action.value == 'deleted' %}error{% elif e.action.value == 'disabled' %}deleted{% endif %}">{{ e.action.value }}</span></td>
+      <td class="mono">{{ e.path }}</td>
+      <td class="mono muted">{{ e.source_id[:8] }}…</td>
+      <td class="muted">{{ e.ingestor_id or 'local' }}</td>
+      <td class="muted">{{ e.actor }}</td>
+      <td class="mono muted">
+        {% if e.details.get('documents_removed') is not none %}
+          docs={{ e.details.documents_removed }}, chunks={{ e.details.chunks_removed }}
+        {% else %}
+          {{ e.details }}
+        {% endif %}
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7" class="muted">No source actions recorded yet.</td></tr>
   {% endfor %}
   </tbody>
 </table>

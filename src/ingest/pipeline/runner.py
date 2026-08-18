@@ -20,7 +20,11 @@ from ingest.db.models import (
 )
 from ingest.pipeline.chunkers import chunk_text, estimate_tokens
 from ingest.pipeline.embedders import build_embedder
-from ingest.pipeline.parsers import UnsupportedDocumentError, parse_file
+from ingest.pipeline.parsers import UnsupportedDocumentError, count_pages, parse_file
+from ingest.services.metadata import (
+    embedder_model_invocation,
+    original_filename_from_path,
+)
 from ingest.vectors.lancedb_store import ChunkRecord, LanceStore, new_chunk_id
 from ingest.watcher.hasher import sha256_file
 
@@ -61,6 +65,7 @@ class PipelineRunner:
         document.size_bytes = stat.st_size
         document.mtime = stat.st_mtime
         document.content_sha256 = content_sha
+        document.original_filename = document.original_filename or original_filename_from_path(path)
         document.updated_at = utcnow()
 
         if (
@@ -85,11 +90,13 @@ class PipelineRunner:
             content_sha256=content_sha,
             status=RunStatus.running,
             lance_table=self.settings.lance_table,
+            model_invocations=[],
         )
         session.add(run)
         await session.flush()
 
         try:
+            page_count = count_pages(path)
             text = parse_file(path)
             chunks = chunk_text(text, chunk_size=chunk_size, overlap=overlap)
             if not chunks:
@@ -129,10 +136,21 @@ class PipelineRunner:
             for row in meta_rows:
                 session.add(row)
 
+            invocations = [
+                embedder_model_invocation(
+                    provider=str(embedder_cfg.get("provider") or self.settings.embedder_provider),
+                    model=str(embedder_cfg.get("model") or self.settings.embedder_model),
+                    chunk_count=len(records),
+                )
+            ]
             run.status = RunStatus.success
             run.chunk_count = len(records)
+            run.page_count = page_count
+            run.model_invocations = invocations
             run.finished_at = utcnow()
             document.status = DocumentStatus.ready
+            document.page_count = page_count
+            document.model_invocations = invocations
             document.indexed_at = utcnow()
             document.error_message = None
             await session.flush()

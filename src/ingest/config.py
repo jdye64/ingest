@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "ingest"
-    host: str = "127.0.0.1"
+    host: str = "0.0.0.0"
     port: int = 8080
     data_dir: Path = Path("./data")
 
@@ -29,6 +29,13 @@ class Settings(BaseSettings):
     worker_concurrency: int = 2
     reconcile_interval_seconds: int = 60
     queue_maxsize: int = 1000
+
+    # Remote ingestors
+    ingestor_heartbeat_timeout_seconds: int = 15
+    ingestor_source_sync_seconds: int = 10
+    ingestor_heartbeat_interval_seconds: int = 5
+    # How long an ingestor may hold an indexing claim before another ingestor can take over
+    ingestor_claim_timeout_seconds: int = 600
 
     # Embedding defaults for the system index config
     embedder_provider: str = "deterministic"  # deterministic | local | openai_compatible

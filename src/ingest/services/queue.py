@@ -12,6 +12,7 @@ from ingest.config import Settings
 from ingest.db.models import Document, DocumentStatus, WatchSource, utcnow
 from ingest.db.session import session_scope
 from ingest.pipeline.runner import PipelineRunner
+from ingest.services.metadata import original_filename_from_path
 from ingest.watcher.hasher import sha256_file
 
 logger = logging.getLogger(__name__)
@@ -92,8 +93,20 @@ class WorkerPool:
                 break
             try:
                 await self._process(job)
+                from ingest.services.events import get_event_hub
+
+                await get_event_hub().publish(
+                    "document",
+                    {"action": "indexed_local", "document_id": job.document_id},
+                )
             except Exception:
                 logger.exception("Worker %s failed job %s", worker_id, job.document_id)
+                from ingest.services.events import get_event_hub
+
+                await get_event_hub().publish(
+                    "document",
+                    {"action": "failed_local", "document_id": job.document_id},
+                )
             finally:
                 self.queue.task_done(job.document_id)
         logger.info("Worker %s stopped", worker_id)
@@ -105,7 +118,11 @@ class WorkerPool:
                 return
             if document.status == DocumentStatus.deleted and not job.force:
                 return
-            await self.runner.index_document(session, document, force=job.force)
+            run = await self.runner.index_document(session, document, force=job.force)
+            from ingest.services.throughput import get_throughput_meter
+
+            pages = max(1, int(document.page_count or run.page_count or 1))
+            get_throughput_meter().record(pages, ingestor_id=document.ingestor_id or "local")
 
 
 async def upsert_document_for_path(
@@ -132,10 +149,12 @@ async def upsert_document_for_path(
         document = Document(
             source_id=source.id,
             path=resolved,
+            original_filename=original_filename_from_path(resolved),
             content_sha256=content_sha,
             size_bytes=stat.st_size,
             mtime=stat.st_mtime,
             status=DocumentStatus.pending,
+            model_invocations=[],
         )
         session.add(document)
         await session.flush()
@@ -147,6 +166,8 @@ async def upsert_document_for_path(
     )
     document.size_bytes = stat.st_size
     document.mtime = stat.st_mtime
+    if not document.original_filename:
+        document.original_filename = original_filename_from_path(resolved)
     document.updated_at = utcnow()
     if document.status == DocumentStatus.deleted:
         document.status = DocumentStatus.pending

@@ -2,34 +2,69 @@
 {% block title %}Documents · Ingest{% endblock %}
 {% block content %}
 <h1>Documents</h1>
-<form class="inline" method="get" action="/documents">
+
+<form class="filters" method="get" action="/documents">
   <div>
-    <label class="muted" for="status">Status</label><br/>
-    <select id="status" name="status" onchange="this.form.submit()">
+    <label class="muted" for="filename">Filename</label><br/>
+    <input id="filename" name="filename" value="{{ query.filename or '' }}" placeholder="report.pdf" />
+  </div>
+  <div>
+    <label class="muted" for="path">Path contains</label><br/>
+    <input id="path" name="path" value="{{ query.path or '' }}" placeholder="/docs/2024" size="28" />
+  </div>
+  <div>
+    <label class="muted" for="ingestor_id">Ingestor</label><br/>
+    <select id="ingestor_id" name="ingestor_id">
       <option value="">all</option>
-      {% for s in statuses %}
-      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+      <option value="local" {% if query.ingestor_id == 'local' %}selected{% endif %}>local</option>
+      {% for aid in ingestor_ids %}
+      <option value="{{ aid }}" {% if query.ingestor_id == aid %}selected{% endif %}>{{ aid }}</option>
       {% endfor %}
     </select>
   </div>
+  <div>
+    <label class="muted" for="status">Status</label><br/>
+    <select id="status" name="status">
+      <option value="">all</option>
+      {% for s in statuses %}
+      <option value="{{ s }}" {% if query.status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div>
+    <label class="muted" for="date_from">Updated from</label><br/>
+    <input id="date_from" type="date" name="date_from" value="{{ query.date_from.date().isoformat() if query.date_from else '' }}" />
+  </div>
+  <div>
+    <label class="muted" for="date_to">Updated to</label><br/>
+    <input id="date_to" type="date" name="date_to" value="{{ query.date_to.date().isoformat() if query.date_to else '' }}" />
+  </div>
+  <div>
+    <label class="muted" for="size_min">Min size (bytes)</label><br/>
+    <input id="size_min" name="size_min" type="number" min="0" value="{{ query.size_min if query.size_min is not none else '' }}" placeholder="0" />
+  </div>
+  <div>
+    <label class="muted" for="size_max">Max size (bytes)</label><br/>
+    <input id="size_max" name="size_max" type="number" min="0" value="{{ query.size_max if query.size_max is not none else '' }}" placeholder="1048576" />
+  </div>
+  <div>
+    <label class="muted" for="page_size">Page size</label><br/>
+    <select id="page_size" name="page_size">
+      {% for n in [25, 50, 100, 200] %}
+      <option value="{{ n }}" {% if query.page_size == n %}selected{% endif %}>{{ n }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div style="align-self:end;">
+    <button type="submit">Search</button>
+    <a class="btn secondary" href="/documents" style="margin-left:0.35rem;">Clear</a>
+  </div>
 </form>
 
-<table>
-  <thead>
-    <tr><th>Status</th><th>Path</th><th>SHA</th><th>Indexed</th><th>Updated</th></tr>
-  </thead>
-  <tbody>
-  {% for doc in documents %}
-    <tr>
-      <td><span class="badge {{ doc.status.value }}">{{ doc.status.value }}</span></td>
-      <td><a href="/documents/{{ doc.id }}">{{ doc.path }}</a></td>
-      <td class="mono">{{ doc.content_sha256[:12] if doc.content_sha256 else '—' }}</td>
-      <td class="muted">{{ doc.indexed_at or '—' }}</td>
-      <td class="muted">{{ doc.updated_at }}</td>
-    </tr>
-  {% else %}
-    <tr><td colspan="5" class="muted">No documents yet.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div id="documents-results"
+     hx-get="/partials/documents-table?{{ qs }}"
+     hx-trigger="every 8s, sse:message from:#sse-bridge"
+     hx-swap="innerHTML">
+  {% include "partials/documents_table.html" %}
+</div>
 {% endblock %}

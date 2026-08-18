@@ -69,7 +69,13 @@ class LanceStore:
 
     def delete_document(self, document_id: str) -> None:
         table = self._table()
-        table.delete(f"document_id = '{document_id}'")
+        safe_id = document_id.replace("'", "''")
+        table.delete(f"document_id = '{safe_id}'")
+
+    def delete_source(self, source_id: str) -> None:
+        table = self._table()
+        safe_id = source_id.replace("'", "''")
+        table.delete(f"source_id = '{safe_id}'")
 
     def upsert_chunks(self, records: list[ChunkRecord]) -> None:
         if not records:

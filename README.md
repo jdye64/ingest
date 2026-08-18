@@ -30,9 +30,28 @@ Open:
 ## CLI
 
 ```bash
-uv run ingest serve --host 127.0.0.1 --port 8080
+uv run ingest serve --host 0.0.0.0 --port 8080
 uv run ingest mcp          # stdio MCP for Cursor
+uv run ingest ingestor --server-url http://127.0.0.1:8080 --ingestor-id edge-1 --api-key <key>
 ```
+
+## Multi-ingestor ingestion
+
+Multiple remote **ingestors** can index local files and push results into one central server (metadata DB + LanceDB). The portal assigns watch paths to each ingestor by ID.
+
+1. Start the central server: `uv run ingest serve`
+2. Open **Ingestors** in the portal, create an ingestor, and copy the one-time API key
+3. On **Sources**, add a directory and set **Owner** to that ingestor (path must exist on the ingestor host)
+4. On the ingestor host:
+
+```bash
+uv run ingest ingestor \
+  --server-url http://<central-host>:8080 \
+  --ingestor-id <id> \
+  --api-key <key>
+```
+
+Ingestors heartbeat their status; the dashboard/ingestors/documents pages refresh live. Sources with no ingestor owner are still watched and indexed by the local `serve` process.
 
 ## Cursor MCP (stdio)
 
@@ -67,12 +86,25 @@ Add to your MCP config:
 | Method | Path | Purpose |
 |--------|------|---------|
 | GET | `/api/v1/health` | Health |
-| GET | `/api/v1/status` | Status counts + queue depth |
-| GET/POST | `/api/v1/sources` | List / add watch dirs |
+| GET | `/api/v1/status` | Status counts + queue depth + ingestor counts |
+| GET | `/api/v1/events` | SSE live status stream |
+| GET/POST | `/api/v1/sources` | List / add watch dirs (`ingestor_id` optional) |
+| POST | `/api/v1/sources/{id}/enable` | Enable/disable a source |
+| DELETE | `/api/v1/sources/{id}` | Delete source and purge its docs from DB + VDB |
+| GET | `/api/v1/sources/audit` | Source create/enable/disable/delete audit log |
 | GET | `/api/v1/documents` | List documents |
 | GET | `/api/v1/documents/{id}` | Provenance + latest run/config |
 | POST | `/api/v1/documents/{id}/reindex` | Force reindex |
 | GET | `/api/v1/search?q=` | Vector search |
+| GET | `/api/v1/index-config/default` | Default index config (ingestors use this) |
+| POST | `/api/v1/ingestors` | Create ingestor (returns API key once) |
+| GET | `/api/v1/ingestors` | List ingestors |
+| POST | `/api/v1/ingestors/me/heartbeat` | Ingestor heartbeat (`X-Ingestor-Id` + key) |
+| GET | `/api/v1/ingestors/me/sources` | Sources assigned to this ingestor |
+| POST | `/api/v1/ingestors/me/documents/upsert` | Report file discover/change/delete (atomic claim) |
+| GET | `/api/v1/ingestors/me/documents/check` | Pre-flight: already indexed / claim in progress? |
+| POST | `/api/v1/ingestors/me/documents/{id}/index` | Push chunks + vectors (claim owner only) |
+| POST | `/api/v1/ingestors/me/documents/{id}/fail` | Report indexing error |
 
 ## Configuration
 
@@ -130,8 +162,9 @@ uv run pytest
 ```
 src/ingest/
   app.py            # FastAPI + lifespan (watcher/workers/MCP)
-  cli.py            # ingest serve | ingest mcp
-  api/              # REST
+  cli.py            # ingest serve | ingest mcp | ingest ingestor
+  ingestor/         # Remote ingestor client + local watch/index
+  api/              # REST (+ ingestor endpoints, SSE)
   web/              # HTMX portal
   mcp/              # MCP tools
   pipeline/         # parse → chunk → embed
@@ -139,4 +172,3 @@ src/ingest/
   vectors/          # LanceDB
   db/               # SQLModel + Alembic
 ```
-# ingest

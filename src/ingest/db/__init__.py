@@ -7,6 +7,8 @@ from ingest.db.models import (
     IndexConfig,
     IndexRun,
     RunStatus,
+    SourceAction,
+    SourceAuditEvent,
     WatchSource,
 )
 
@@ -17,5 +19,7 @@ __all__ = [
     "IndexConfig",
     "IndexRun",
     "RunStatus",
+    "SourceAction",
+    "SourceAuditEvent",
     "WatchSource",
 ]

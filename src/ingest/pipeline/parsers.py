@@ -10,6 +10,17 @@ class UnsupportedDocumentError(ValueError):
     pass
 
 
+def count_pages(path: Path) -> int:
+    """Return page count for throughput metrics (PDF page count, else 1)."""
+    suffix = path.suffix.lower()
+    if suffix == ".pdf":
+        try:
+            return max(1, len(PdfReader(str(path)).pages))
+        except Exception:
+            return 1
+    return 1
+
+
 def parse_file(path: Path) -> str:
     suffix = path.suffix.lower()
     if suffix in {".txt", ".md", ".markdown"}:

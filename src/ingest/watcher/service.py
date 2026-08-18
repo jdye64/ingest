@@ -116,7 +116,9 @@ class WatcherService:
             self._observer = Observer()
 
         async with session_scope() as session:
-            result = await session.execute(select(WatchSource).where(WatchSource.enabled.is_(True)))
+            result = await session.execute(
+                select(WatchSource).where(WatchSource.enabled.is_(True), WatchSource.ingestor_id.is_(None))
+            )
             sources = list(result.scalars().all())
 
         for source in sources:
@@ -182,7 +184,9 @@ class WatcherService:
 
     async def reconcile_once(self) -> None:
         async with session_scope() as session:
-            result = await session.execute(select(WatchSource).where(WatchSource.enabled.is_(True)))
+            result = await session.execute(
+                select(WatchSource).where(WatchSource.enabled.is_(True), WatchSource.ingestor_id.is_(None))
+            )
             sources = list(result.scalars().all())
 
             for source in sources:
