@@ -1,0 +1,41 @@
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Name</th>
+      <th>Status</th>
+      <th>Hostname</th>
+      <th>Sources</th>
+      <th>Last heartbeat</th>
+      <th>Activity</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for row in rows %}
+    <tr>
+      <td class="mono">{{ row.ingestor.id }}</td>
+      <td>{{ row.ingestor.name }}</td>
+      <td>
+        <span class="badge {% if row.online %}{% elif row.ingestor.status.value == 'disabled' %}error{% else %}deleted{% endif %}">
+          {% if row.ingestor.status.value == 'disabled' %}disabled{% elif row.online %}online{% else %}offline{% endif %}
+        </span>
+      </td>
+      <td class="muted">{{ row.ingestor.hostname or '—' }}</td>
+      <td>{{ row.source_count }}</td>
+      <td class="muted">{{ row.ingestor.last_heartbeat_at or '—' }}</td>
+      <td class="mono muted">
+        {{ row.ingestor.current_activity.get('stage', '') }}
+        {% if row.ingestor.current_activity.get('path') %}<br/>{{ row.ingestor.current_activity.path }}{% endif %}
+      </td>
+      <td>
+        <form method="post" action="/ingestors/{{ row.ingestor.id }}/rotate-key">
+          <button class="secondary" type="submit">Rotate key</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8" class="muted">No ingestors yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>

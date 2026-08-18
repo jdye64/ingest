@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Ingestors · Ingest{% endblock %}
+{% block content %}
+<h1>Ingestors</h1>
+<p class="muted">Create an ingestor, assign watch paths on the Sources page, then run <span class="mono">ingest ingestor</span> on the host that has those paths.</p>
+
+{% if created_key %}
+<div class="hit" style="border-color: var(--accent);">
+  <div class="path">API key for <span class="mono">{{ created_id }}</span> (shown once)</div>
+  <p class="mono">{{ created_key }}</p>
+  <p class="muted">Example:</p>
+  <pre class="mono" style="white-space:pre-wrap;">uv run ingest ingestor --server-url http://127.0.0.1:8080 --ingestor-id {{ created_id }} --api-key {{ created_key }}</pre>
+</div>
+{% endif %}
+
+<form class="inline" method="post" action="/ingestors">
+  <div>
+    <label class="muted" for="ingestor_id">Ingestor ID</label><br/>
+    <input id="ingestor_id" name="ingestor_id" required pattern="[A-Za-z0-9_-]+" placeholder="edge-1" />
+  </div>
+  <div>
+    <label class="muted" for="name">Display name</label><br/>
+    <input id="name" name="name" required placeholder="Edge lab ingestor" />
+  </div>
+  <button type="submit">Create ingestor</button>
+</form>
+
+<div id="ingestors-table"
+     hx-get="/partials/ingestors-table"
+     hx-trigger="every 3s, sse:message from:#sse-bridge"
+     hx-swap="innerHTML">
+  {% include "partials/ingestors_table.html" %}
+</div>
+{% endblock %}
