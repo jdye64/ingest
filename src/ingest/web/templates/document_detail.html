@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Document · Ingest{% endblock %}
+{% block content %}
+<h1>Document</h1>
+<p class="mono">{{ document.path }}</p>
+<p>
+  <span class="badge {{ document.status.value }}">{{ document.status.value }}</span>
+  {% if document.content_sha256 %}<span class="muted mono">sha {{ document.content_sha256 }}</span>{% endif %}
+</p>
+{% if document.error_message %}
+<p class="badge error">{{ document.error_message }}</p>
+{% endif %}
+<form method="post" action="/documents/{{ document.id }}/reindex" style="margin:1rem 0;">
+  <button type="submit">Reindex</button>
+</form>
+
+{% if config %}
+<h2>Index config used</h2>
+<pre class="mono" style="background:#fffdf9;border:1px solid var(--line);padding:1rem;border-radius:10px;overflow:auto;">{{ config.config_json | tojson(indent=2) }}</pre>
+{% endif %}
+
+<h2>Index runs</h2>
+<table>
+  <thead><tr><th>Status</th><th>Chunks</th><th>SHA</th><th>Started</th><th>Finished</th><th>Notes</th></tr></thead>
+  <tbody>
+  {% for run in runs %}
+    <tr>
+      <td><span class="badge {{ run.status.value }}">{{ run.status.value }}</span></td>
+      <td>{{ run.chunk_count }}</td>
+      <td class="mono">{{ run.content_sha256[:12] if run.content_sha256 else '—' }}</td>
+      <td class="muted">{{ run.started_at }}</td>
+      <td class="muted">{{ run.finished_at or '—' }}</td>
+      <td class="mono">{{ run.notes or '' }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="6" class="muted">No runs yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Dashboard · Ingest{% endblock %}
+{% block content %}
+<h1>Dashboard</h1>
+<p class="muted">Queue depth: <strong>{{ queue_depth }}</strong></p>
+<div class="grid" hx-get="/api/v1/status" hx-trigger="every 5s" hx-swap="none">
+  {% for key, value in counts.items() %}
+  <div class="stat">
+    <div class="label">{{ key }}</div>
+    <div class="value">{{ value }}</div>
+  </div>
+  {% endfor %}
+</div>
+
+<h2 style="margin-top:2rem;">Recent errors</h2>
+{% if errors %}
+<table>
+  <thead><tr><th>Path</th><th>Error</th><th>Updated</th></tr></thead>
+  <tbody>
+  {% for doc in errors %}
+    <tr>
+      <td><a href="/documents/{{ doc.id }}">{{ doc.path }}</a></td>
+      <td class="mono">{{ doc.error_message }}</td>
+      <td class="muted">{{ doc.updated_at }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<p class="muted">No recent errors.</p>
+{% endif %}
+{% endblock %}

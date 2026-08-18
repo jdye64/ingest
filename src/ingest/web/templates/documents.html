@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Documents · Ingest{% endblock %}
+{% block content %}
+<h1>Documents</h1>
+<form class="inline" method="get" action="/documents">
+  <div>
+    <label class="muted" for="status">Status</label><br/>
+    <select id="status" name="status" onchange="this.form.submit()">
+      <option value="">all</option>
+      {% for s in statuses %}
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+  </div>
+</form>
+
+<table>
+  <thead>
+    <tr><th>Status</th><th>Path</th><th>SHA</th><th>Indexed</th><th>Updated</th></tr>
+  </thead>
+  <tbody>
+  {% for doc in documents %}
+    <tr>
+      <td><span class="badge {{ doc.status.value }}">{{ doc.status.value }}</span></td>
+      <td><a href="/documents/{{ doc.id }}">{{ doc.path }}</a></td>
+      <td class="mono">{{ doc.content_sha256[:12] if doc.content_sha256 else '—' }}</td>
+      <td class="muted">{{ doc.indexed_at or '—' }}</td>
+      <td class="muted">{{ doc.updated_at }}</td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">No documents yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

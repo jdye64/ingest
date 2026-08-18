@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}Ingest{% endblock %}</title>
+  <script src="https://unpkg.com/htmx.org@2.0.4"></script>
+  <style>
+    :root {
+      --bg: #f6f3ee;
+      --ink: #1c1a17;
+      --muted: #5c574f;
+      --accent: #0f6e56;
+      --card: #fffdf9;
+      --line: #ddd5c8;
+      --danger: #9b2c2c;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, #e7f2ec 0%, transparent 55%),
+        radial-gradient(900px 500px at 100% 0%, #efe6d8 0%, transparent 50%),
+        var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--line);
+      backdrop-filter: blur(8px);
+      position: sticky;
+      top: 0;
+      background: color-mix(in srgb, var(--bg) 85%, white);
+      z-index: 10;
+    }
+    .brand { font-weight: 700; letter-spacing: 0.02em; font-size: 1.15rem; }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      margin-left: 1rem;
+      font-size: 0.95rem;
+    }
+    nav a:hover, nav a.active { color: var(--accent); }
+    main { padding: 1.5rem; max-width: 1100px; margin: 0 auto; }
+    h1 { margin: 0 0 1rem; font-size: 1.6rem; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.75rem; }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      padding: 1rem;
+      border-radius: 10px;
+    }
+    .stat .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .stat .value { font-size: 1.6rem; font-weight: 700; margin-top: 0.25rem; }
+    table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+    th, td { text-align: left; padding: 0.7rem 0.8rem; border-bottom: 1px solid var(--line); font-size: 0.92rem; vertical-align: top; }
+    th { background: #f0ebe3; color: var(--muted); font-weight: 600; }
+    tr:last-child td { border-bottom: none; }
+    .badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      background: #e8f5f0;
+      color: var(--accent);
+    }
+    .badge.error { background: #fde8e8; color: var(--danger); }
+    .badge.pending, .badge.indexing { background: #fff4df; color: #8a5a00; }
+    .badge.deleted { background: #eee; color: #666; }
+    form.inline { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: end; margin-bottom: 1rem; }
+    input, select, button, textarea {
+      font: inherit;
+      padding: 0.55rem 0.7rem;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: white;
+    }
+    button, .btn {
+      background: var(--accent);
+      color: white;
+      border: none;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-block;
+    }
+    button.secondary { background: #5c574f; }
+    .muted { color: var(--muted); }
+    .mono { font-family: "IBM Plex Mono", ui-monospace, monospace; font-size: 0.85rem; word-break: break-all; }
+    .hit { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 1rem; margin-bottom: 0.75rem; }
+    .hit .path { font-weight: 600; margin-bottom: 0.35rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">Ingest</div>
+    <nav>
+      <a href="/" class="{% if request.url.path == '/' %}active{% endif %}">Dashboard</a>
+      <a href="/sources" class="{% if request.url.path.startswith('/sources') %}active{% endif %}">Sources</a>
+      <a href="/documents" class="{% if request.url.path.startswith('/documents') %}active{% endif %}">Documents</a>
+      <a href="/search" class="{% if request.url.path.startswith('/search') %}active{% endif %}">Search</a>
+      <a href="/api/v1/health" target="_blank">API</a>
+    </nav>
+  </header>
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

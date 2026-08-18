@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Search · Ingest{% endblock %}
+{% block content %}
+<h1>Search</h1>
+<form class="inline" method="get" action="/search">
+  <input name="q" value="{{ q }}" size="60" placeholder="Search indexed documents…" />
+  <button type="submit">Search</button>
+</form>
+
+{% if q %}
+  <p class="muted">{{ hits | length }} hits</p>
+  {% for hit in hits %}
+    <div class="hit">
+      <div class="path"><a href="/documents/{{ hit.document_id }}">{{ hit.path }}</a> <span class="muted">#{{ hit.chunk_index }}</span></div>
+      <div class="muted">score={{ hit.score }}</div>
+      <p>{{ hit.text[:500] }}{% if hit.text|length > 500 %}…{% endif %}</p>
+    </div>
+  {% else %}
+    <p class="muted">No results.</p>
+  {% endfor %}
+{% endif %}
+{% endblock %}

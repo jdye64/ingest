@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Sources · Ingest{% endblock %}
+{% block content %}
+<h1>Watch sources</h1>
+<form class="inline" method="post" action="/sources">
+  <div>
+    <label class="muted" for="path">Directory path</label><br/>
+    <input id="path" name="path" size="50" required placeholder="/path/to/docs" />
+  </div>
+  <div>
+    <label class="muted"><input type="checkbox" name="recursive" value="true" checked /> Recursive</label>
+  </div>
+  <button type="submit">Add source</button>
+</form>
+
+<table>
+  <thead>
+    <tr><th>Path</th><th>Enabled</th><th>Recursive</th><th>Globs</th><th></th></tr>
+  </thead>
+  <tbody>
+  {% for s in sources %}
+    <tr>
+      <td class="mono">{{ s.path }}</td>
+      <td><span class="badge {% if not s.enabled %}deleted{% endif %}">{{ s.enabled }}</span></td>
+      <td>{{ s.recursive }}</td>
+      <td class="muted">include={{ s.include_globs }}{% if s.exclude_globs %}; exclude={{ s.exclude_globs }}{% endif %}</td>
+      <td>
+        <form method="post" action="/sources/{{ s.id }}/toggle">
+          <button class="secondary" type="submit">{% if s.enabled %}Disable{% else %}Enable{% endif %}</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="5" class="muted">No sources yet. Add a directory above or set WATCH_PATHS.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}
